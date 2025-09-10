@@ -9,6 +9,8 @@ import Foundation
 import CoreLocation
 import BackgroundTasks
 import Combine
+import UserNotifications // Added for local notifications
+
 
 @available(macOS 11.0, iOS 13.0, *)
 @MainActor
@@ -41,9 +43,15 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
         locationManager = CLLocationManager()
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.allowsBackgroundLocationUpdates = true
+        locationManager.pausesLocationUpdatesAutomatically = false
         
         // Check initial capabilities
                 checkSystemCapabilities()
+        
+        
+        // Request notification permissions
+        requestNotificationPermissions()
     }
 
     private func checkSystemCapabilities() {
@@ -58,6 +66,33 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
         print("   - Running on Device: YES")
         #endif
     }
+    
+    private func requestNotificationPermissions() {
+         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+             if granted {
+                 print("✅ Notification permissions granted")
+             } else if let error = error {
+                 print("❌ Failed to request notification permissions: \(error)")
+             }
+         }
+     }
+     
+     private func showTrackingNotification() {
+         let content = UNMutableNotificationContent()
+         content.title = "Address Verification"
+         content.body = "Sending location updates for verification..."
+         content.sound = .default
+         
+         let request = UNNotificationRequest(identifier: "LocationTracking", content: content, trigger: nil)
+         UNUserNotificationCenter.current().add(request) { error in
+             if let error = error {
+                 print("❌ Failed to show notification: \(error)")
+             } else {
+                 print("🔔 Tracking notification displayed")
+             }
+         }
+     }
+    
     func start(apiKey: String, token: String, refreshToken: String) {
         self.apiKey = apiKey
         self.token = token
@@ -67,6 +102,10 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
 
         print("🚀 Starting LocationTrackingService...")
            print("   - API Key: \(apiKey.prefix(20))...")
+        
+        // Show notification to indicate service is running
+              showTrackingNotification()
+
 //           print("   - Customer ID: \(customerID)")
 
 //
@@ -145,6 +184,8 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.pausesLocationUpdatesAutomatically = false
         locationManager.startMonitoringSignificantLocationChanges()
+        locationManager.startUpdatingLocation()
+
         
         // Schedule the first background task
         scheduleBackgroundGeotagTask()
@@ -252,6 +293,8 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
         }
 
         print("✅ Finished geotagging session")
+        scheduleBackgroundGeotagTask() // Reschedule for next session
+
     }
 
     private func fetchOrgConfig() async -> OrganisationConfigData? {
@@ -325,7 +368,11 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
             if isConnectedToInternet() {
                 await sendCachedGeoTags()
                 do {
-                    try await sendGeoTag(geoTag: request, token: token)
+                    let success = try await sendGeoTag(geoTag: request, token: token)
+                                        if success {
+                                            print("✅ GeoTag sent successfully")
+                                            showTrackingNotification() // Show periodic notification
+                                        }
                 } catch {
                     print("Error sending current geotag: \(error)")
                     let cached = CachedGeoTag(
@@ -419,6 +466,8 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
 
         cancellables.removeAll()
         print("🛑 Geotagging stopped")
+        UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: ["LocationTracking"])
+
     }
     
     func scheduleBackgroundGeotagTask() {
@@ -507,6 +556,12 @@ func handleBackgroundGeotagTask(task: BGProcessingTask) {
         func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
             // Handle location updates if needed
             print("📍 Location updated: \(locations.last?.coordinate.longitude.description ?? "unknown")")
+            Task {
+                       await postCurrentLocation()
+                       if isGeotaggingActive {
+                           await runScheduledGeoTagging() // Restart geotagging on significant location change
+                       }
+                   }
         }
         
         func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {

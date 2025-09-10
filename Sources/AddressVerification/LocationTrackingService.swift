@@ -31,6 +31,8 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
     private let isSimpleTestMode = true  // Set to false for production
     private let testIntervalSeconds = 10.0
     private let testTotalIterations = 12  // 12 iterations = 2 minutes
+    private let isTestingMode = true  // Set to false for production
+
 
 
 
@@ -150,38 +152,14 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
 
 
     private func runScheduledGeoTagging() async {
-        
         guard !isGeotaggingActive else {
-                  print("⚠️ Geotagging session already active")
-                  return
-              }
-              
-              isGeotaggingActive = true
-              defer { isGeotaggingActive = false }
-              
-        if isSimpleTestMode {
-               print("🧪 SIMPLE TEST MODE: Sending geotag every \(Int(testIntervalSeconds)) seconds")
-               print("🔄 Will send \(testTotalIterations) geotags total")
-               
-               for i in 1...testTotalIterations {
-                   print("📍 Processing geotag \(i)/\(testTotalIterations)")
-                   await postCurrentLocation()
-                   
-                   // Don't sleep after the last iteration
-                   if i < testTotalIterations {
-                       print("⏳ Waiting \(Int(testIntervalSeconds)) seconds...")
-                       try? await Task.sleep(nanoseconds: UInt64(testIntervalSeconds * 1_000_000_000))
-                   }
-                   
-                   if !isGeotaggingActive {
-                       print("🛑 Geotagging session stopped externally")
-                       break
-                   }
-               }
-               
-               print("✅ Finished simple test session")
-               return
-           }
+            print("⚠️ Geotagging session already active")
+            return
+        }
+        
+        isGeotaggingActive = true
+        defer { isGeotaggingActive = false }
+        
         // Step 1: Fetch org config
         let orgConfig = await fetchOrgConfig()
         guard let config = orgConfig else {
@@ -201,8 +179,20 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
             .compactMap { ISO8601DateFormatter().date(from: $0.timestamp) }
             .max() ?? Date()
 
-        let intervalSeconds = config.geotaggingPollingInterval * 3600
-        let sessionDurationSeconds = Double(config.geotaggingSessionTimeout) * 86400
+        let intervalSeconds: Double
+        let sessionDurationSeconds: Double
+        
+        if isTestingMode {
+            // TESTING: 10 second intervals, 2 minute session
+            intervalSeconds = 10.0
+            sessionDurationSeconds = 120.0  // 2 minutes total
+            print("🧪 TESTING MODE: 10 second intervals, 2 minute session")
+        } else {
+            // PRODUCTION: Use config values
+            intervalSeconds = config.geotaggingPollingInterval * 3600
+            sessionDurationSeconds = Double(config.geotaggingSessionTimeout) * 86400
+            print("🏭 PRODUCTION MODE: Using config intervals")
+        }
 
         var current = lastTimestamp.timeIntervalSince1970
         let end = current + sessionDurationSeconds
@@ -216,31 +206,49 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
 
         print("🔄 Scheduled \(timestamps.count) timestamps")
 
-//        for timestamp in timestamps {
-//            let delay = timestamp - Date().timeIntervalSince1970
-//            if delay > 0 {
-//                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-//            }
+        // Print all timestamps in readable format
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .none
+        dateFormatter.timeStyle = .medium
         
+        print("📅 Generated Timestamps:")
+        for (index, timestamp) in timestamps.enumerated() {
+            let date = Date(timeIntervalSince1970: timestamp)
+            let delay = timestamp - Date().timeIntervalSince1970
+            let delaySeconds = Int(delay)
+            
+            print("   \(index + 1). \(dateFormatter.string(from: date)) (in \(delaySeconds)s)")
+        }
+
+        print("⏰ Current time: \(dateFormatter.string(from: Date()))")
         
-        // Limit the number of iterations in background mode
-        let maxIterations = min(timestamps.count, 10) // Prevent excessive background processing
+        // For testing, process more iterations
+        let maxIterations = isTestingMode ? min(timestamps.count, 20) : min(timestamps.count, 10)
+        print("🚀 Starting geotag loop with max \(maxIterations) iterations...")
         
         for i in 0..<maxIterations {
             let timestamp = timestamps[i]
             let delay = timestamp - Date().timeIntervalSince1970
+            
             if delay > 0 {
+                if isTestingMode {
+                    let delaySeconds = Int(delay)
+                    print("⏳ Waiting \(delaySeconds) seconds until next geotag...")
+                } else {
+                    let delayMinutes = Int(delay / 60)
+                    print("⏳ Waiting \(delayMinutes) minutes until next geotag...")
+                }
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             }
 
+            print("📍 Processing geotag \(i + 1)/\(maxIterations) at \(dateFormatter.string(from: Date()))")
             await postCurrentLocation()
             
-            
-                       // Check if we should continue (for background task management)
-                       if !isGeotaggingActive {
-                           print("🛑 Geotagging session stopped externally")
-                           break
-                       }
+            // Check if we should continue
+            if !isGeotaggingActive {
+                print("🛑 Geotagging session stopped externally")
+                break
+            }
         }
 
         print("✅ Finished geotagging session")

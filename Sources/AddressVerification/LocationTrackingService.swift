@@ -74,25 +74,59 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
             await requestLocationPermissions()
 
             await self.runScheduledGeoTagging()
+            scheduleBackgroundGeotagTask()
         }
-        scheduleBackgroundGeotagTask()
+        
 
     }
     
-    private func requestLocationPermissions() {
-           switch locationManager.authorizationStatus {
-           case .notDetermined:
-               locationManager.requestAlwaysAuthorization()
-           case .authorizedAlways:
-               configureLocationManager()
-           case .authorizedWhenInUse:
-               locationManager.requestAlwaysAuthorization()
-           case .denied, .restricted:
-               print("❌ Location permission denied. Background location tracking unavailable.")
-           @unknown default:
-               print("⚠️ Unknown location authorization status")
-           }
-       }
+    private func requestLocationPermissions() async {
+        print("🔐 Requesting location permissions...")
+        print("   Current status: \(locationManager.authorizationStatus.rawValue)")
+        
+        switch locationManager.authorizationStatus {
+        case .notDetermined:
+            print("📱 Requesting Always authorization...")
+            locationManager.requestAlwaysAuthorization()
+            
+            // Wait for permission response
+            await waitForPermissionResponse()
+            
+        case .authorizedWhenInUse:
+            print("⬆️ Upgrading from When-In-Use to Always...")
+            locationManager.requestAlwaysAuthorization()
+            
+            // Wait for permission response
+            await waitForPermissionResponse()
+            
+        case .authorizedAlways:
+            print("✅ Already have Always permission")
+            configureLocationManager()
+            
+        case .denied, .restricted:
+            print("❌ Location permission denied/restricted. Background tracking unavailable.")
+            
+        @unknown default:
+            print("⚠️ Unknown location authorization status")
+        }
+    }
+    
+    private func waitForPermissionResponse() async {
+        // Wait up to 10 seconds for user to respond to permission dialog
+        for _ in 0..<100 {
+            if locationManager.authorizationStatus != .notDetermined {
+                break
+            }
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        }
+        
+        // Configure if we got the right permission
+        if locationManager.authorizationStatus == .authorizedAlways {
+            configureLocationManager()
+        } else {
+            print("❌ Did not receive Always location permission (got: \(locationManager.authorizationStatus.rawValue))")
+        }
+    }
     
     
     private func configureLocationManager() {
@@ -443,22 +477,28 @@ func handleBackgroundGeotagTask(task: BGProcessingTask) {
             print("❌ Location manager error: \(error)")
         }
         
-        func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-            print("🔐 Location authorization changed: \(status.rawValue)")
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        print("🔐 Location authorization changed: \(status.rawValue)")
+        
+        switch status {
+        case .authorizedAlways:
+            print("✅ Got Always permission - configuring location manager")
+            configureLocationManager()
             
-            switch status {
-            case .authorizedAlways:
-                configureLocationManager()
-            case .authorizedWhenInUse:
-                manager.requestAlwaysAuthorization()
-            case .denied, .restricted:
-                print("❌ Location access denied. Background tracking unavailable.")
-                stop()
-            case .notDetermined:
-                manager.requestAlwaysAuthorization()
-            @unknown default:
-                print("⚠️ Unknown authorization status")
-            }
+        case .authorizedWhenInUse:
+            print("⚠️ Only got When-In-Use permission - requesting Always...")
+            // Don't automatically request again here, let the async method handle it
+            
+        case .denied, .restricted:
+            print("❌ Location access denied/restricted. Background tracking unavailable.")
+            stop()
+            
+        case .notDetermined:
+            print("🤔 Permission still not determined")
+            
+        @unknown default:
+            print("⚠️ Unknown authorization status: \(status.rawValue)")
         }
+    }
 
 }

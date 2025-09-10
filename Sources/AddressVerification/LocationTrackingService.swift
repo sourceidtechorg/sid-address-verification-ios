@@ -27,6 +27,11 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
     
     private var customerID: String = ""
     private var isGeotaggingActive = false
+    
+    private let isSimpleTestMode = true  // Set to false for production
+    private let testIntervalSeconds = 10.0
+    private let testTotalIterations = 12  // 12 iterations = 2 minutes
+
 
 
     override init() {
@@ -154,6 +159,29 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
               isGeotaggingActive = true
               defer { isGeotaggingActive = false }
               
+        if isSimpleTestMode {
+               print("🧪 SIMPLE TEST MODE: Sending geotag every \(Int(testIntervalSeconds)) seconds")
+               print("🔄 Will send \(testTotalIterations) geotags total")
+               
+               for i in 1...testTotalIterations {
+                   print("📍 Processing geotag \(i)/\(testTotalIterations)")
+                   await postCurrentLocation()
+                   
+                   // Don't sleep after the last iteration
+                   if i < testTotalIterations {
+                       print("⏳ Waiting \(Int(testIntervalSeconds)) seconds...")
+                       try? await Task.sleep(nanoseconds: UInt64(testIntervalSeconds * 1_000_000_000))
+                   }
+                   
+                   if !isGeotaggingActive {
+                       print("🛑 Geotagging session stopped externally")
+                       break
+                   }
+               }
+               
+               print("✅ Finished simple test session")
+               return
+           }
         // Step 1: Fetch org config
         let orgConfig = await fetchOrgConfig()
         guard let config = orgConfig else {

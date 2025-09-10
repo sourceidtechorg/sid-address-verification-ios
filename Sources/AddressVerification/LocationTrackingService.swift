@@ -28,10 +28,10 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
     private var customerID: String = ""
     private var isGeotaggingActive = false
     
-    private let isSimpleTestMode = true  // Set to false for production
+    private let isSimpleTestMode = false  // Set to false for production
     private let testIntervalSeconds = 10.0
     private let testTotalIterations = 12  // 12 iterations = 2 minutes
-    private let isTestingMode = true  // Set to false for production
+    private let isTestingMode = false  // Set to false for production
 
 
 

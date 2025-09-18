@@ -185,7 +185,7 @@ public struct AddressVerificationField: View {
         
         if verifyLocation {
             Task {
-                LocationTrackingService.shared.start(
+                LocationTrackingService.shared.startTracking(
                     apiKey: apiKey,
                     token: token,
                     refreshToken: refreshToken
@@ -286,7 +286,7 @@ extension AddressVerificationField {
         Task {
             await fetchConfiguration()
             if verifyLocation, let interval = pollingInterval, let timeout = sessionTimeout {
-                LocationTrackingService.shared.start(
+                LocationTrackingService.shared.startTracking(
                     apiKey: apiKey,
                     token: token,
                     refreshToken: refreshToken
@@ -314,7 +314,7 @@ extension AddressVerificationField {
                do {
                    let (interval, timeout) = try await fetchConfigFromServer(apiKey: apiKey, token: token, refreshToken: refreshToken)
                    
-                LocationTrackingService.shared.start(
+                LocationTrackingService.shared.startTracking(
                     apiKey: apiKey,
                     token: token,
                     refreshToken: refreshToken

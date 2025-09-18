@@ -298,7 +298,7 @@ extension AddressVerificationField {
     
 #if os(iOS)
     public static func handleBackgroundGeotagTask(processingTask: BGProcessingTask){
-        LocationTrackingService.shared.handleBackgroundGeotagTask(task: processingTask)
+//        LocationTrackingService.shared.handleBackgroundGeotagTask(task: processingTask)
 
     }
 #endif

@@ -19,7 +19,7 @@ import UserNotifications // Added for local notifications
 class LocationTrackingService: NSObject, CLLocationManagerDelegate {
     static let shared = LocationTrackingService()
     
-    private var locationManager: CLLocationManager!
+    private var locationManager: CLLocationManager?
     private var cancellables = Set<AnyCancellable>()
     
     private let apiHelper = ApiHelper()
@@ -48,11 +48,19 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
           
           super.init()
           
+          
+          self.locationManager = CLLocationManager()
+
+          
           // Configure CLLocationManager
-          locationManager.delegate = self
-          locationManager.desiredAccuracy = kCLLocationAccuracyBest
-          locationManager.allowsBackgroundLocationUpdates = true
-          locationManager.pausesLocationUpdatesAutomatically = false
+          if let locationManager = locationManager {
+              locationManager.delegate = self
+              
+              locationManager.desiredAccuracy = kCLLocationAccuracyBest
+              locationManager.allowsBackgroundLocationUpdates = true
+              locationManager.pausesLocationUpdatesAutomatically = false
+          }
+
           
           print("🚀 [LocationService] Initialized")
       }
@@ -69,7 +77,7 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
     
     // Request permissions
         func requestAuthorization() {
-            locationManager.requestAlwaysAuthorization()
+            locationManager?.requestAlwaysAuthorization()
             print("🔑 [LocationService] Requested Always Authorization")
         }
         
@@ -81,7 +89,7 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
             
             StoredCredentials.save(apiKey: apiKey, token: token, refreshToken: refreshToken)
             
-            locationManager.startUpdatingLocation()
+            locationManager?.startUpdatingLocation()
             print("▶️ [LocationService] Started location tracking")
         }
     
@@ -149,7 +157,7 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
         
         // Stop location updates
         func stopTracking() {
-            locationManager.stopUpdatingLocation()
+            locationManager?.stopUpdatingLocation()
             print("⏹️ [LocationService] Stopped location tracking")
         }
         

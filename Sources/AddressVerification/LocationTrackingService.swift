@@ -169,12 +169,12 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
         }
         
         // CLLocationManagerDelegate - new location update
-        func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) async {
             guard let latestLocation = locations.last else { return }
             print("📡 [LocationService] Received new location: \(latestLocation.coordinate.latitude), \(latestLocation.coordinate.longitude)")
             
             // Forward to processor
-            processor.handleLocationUpdate(latestLocation)
+        await processor.handleLocationUpdate(latestLocation)
         }
         
         // CLLocationManagerDelegate - error handling
@@ -183,9 +183,9 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
         }
         
         // Trigger manual backfill (e.g., when app resumes or timer fires)
-        func backfillIfNeeded() {
+    func backfillIfNeeded() async {
             let now = Date()
-            processor.backfillSchedules(currentDate: now)
+        await processor.backfillSchedules(currentDate: now)
         }
     
     

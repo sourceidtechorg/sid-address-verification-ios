@@ -169,12 +169,14 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
         }
         
         // CLLocationManagerDelegate - new location update
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) async {
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
             guard let latestLocation = locations.last else { return }
             print("📡 [LocationService] Received new location: \(latestLocation.coordinate.latitude), \(latestLocation.coordinate.longitude)")
             
             // Forward to processor
-        await processor.handleLocationUpdate(latestLocation)
+        Task {
+               await processor.handleLocationUpdate(latestLocation)
+           }
         }
         
         // CLLocationManagerDelegate - error handling

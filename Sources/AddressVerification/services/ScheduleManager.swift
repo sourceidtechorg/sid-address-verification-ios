@@ -24,7 +24,7 @@ class ScheduleManager {
     }
     
     // Check if current time falls within the window around any schedule
-    func isWithinScheduleWindow(_ date: Date, windowMinutes: Int = 5) -> Date? {
+    func isWithinScheduleWindow(_ date: Date, windowMinutes: Int = 1) -> Date? {
         for schedule in schedules {
             let lowerBound = schedule.addingTimeInterval(TimeInterval(-windowMinutes * 60))
             let upperBound = schedule.addingTimeInterval(TimeInterval(windowMinutes * 60))

@@ -82,19 +82,21 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
         }
         
         // Start location updates
-        func startTracking(apiKey: String, token: String, refreshToken: String) {
+    func startTracking(apiKey: String, token: String, refreshToken: String) async {
             self.apiKey = apiKey
             self.token = token
             self.refreshToken = refreshToken
             
             StoredCredentials.save(apiKey: apiKey, token: token, refreshToken: refreshToken)
+            requestAuthorization()
+        await startGeotagging()
             
             locationManager?.startUpdatingLocation()
             print("▶️ [LocationService] Started location tracking")
         }
     
     // MARK: - Public entry
-       func startGeotagging(isTesting: Bool = false) async {
+       func startGeotagging() async {
            guard !isGeotaggingActive else {
                print("⚠️ [LocationTrackingService] Geotagging already active")
                return

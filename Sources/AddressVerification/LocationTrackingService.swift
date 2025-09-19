@@ -188,6 +188,23 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
         await processor.backfillSchedules(currentDate: now)
         }
     
+    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        print("🔐 [LocationService] Authorization changed: \(status.rawValue)")
+
+        switch status {
+        case .authorizedAlways, .authorizedWhenInUse:
+            print("✅ Permission granted, starting updates")
+            manager.startUpdatingLocation()
+        case .denied, .restricted:
+            print("❌ Permission denied or restricted")
+        case .notDetermined:
+            print("🤔 Permission not determined yet")
+        @unknown default:
+            break
+        }
+    }
+
+    
     
 //    override init() {
 //        super.init()

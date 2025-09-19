@@ -15,6 +15,7 @@ class LocationProcessor {
     private let locationCache: LocationCache
     private let backendService: BackendService
     private var completedSchedules: [(Date, CLLocation)] = []
+    private var sentSchedules: Set<Date> = [] // 🔑 track already sent
     
     init(scheduleManager: ScheduleManager, locationCache: LocationCache, backendService: BackendService) {
         self.scheduleManager = scheduleManager
@@ -23,7 +24,7 @@ class LocationProcessor {
     }
     
     // Main entry point for handling new location updates
-    func handleLocationUpdate(_ location: CLLocation) {
+    func handleLocationUpdate(_ location: CLLocation) async {
         print("\n🚦 [LocationProcessor] New location update received at \(location.timestamp)")
         
         // 1. Cache the latest location
@@ -31,11 +32,19 @@ class LocationProcessor {
         
         // 2. Check if it's within a schedule window
         if let matchedSchedule = scheduleManager.isWithinScheduleWindow(location.timestamp) {
+            
+            // ✅ Skip if already processed
+            guard !sentSchedules.contains(matchedSchedule) else {
+                print("⏩ [LocationProcessor] Schedule \(matchedSchedule) already sent, skipping")
+                return
+            }
+            
             completedSchedules.append((matchedSchedule, location))
-            print("🎯 [LocationProcessor] Matched location to schedule: \(matchedSchedule)")
+            sentSchedules.insert(matchedSchedule) // mark as sent
+            print("🎯 [LocationProcessor] Matched location to NEW schedule: \(matchedSchedule)")
             
             // Send immediately
-            backendService.sendSchedules(completedSchedules)
+            await backendService.sendSchedules(completedSchedules)
             completedSchedules.removeAll()
         } else {
             print("🙅 [LocationProcessor] Location ignored (not within schedule window)")
@@ -43,20 +52,21 @@ class LocationProcessor {
     }
     
     // Backfill when a schedule has passed without exact location
-    func backfillSchedules(currentDate: Date) {
+    func backfillSchedules(currentDate: Date) async {
         let schedules = scheduleManager.getSchedules()
         
         for schedule in schedules {
-            if schedule < currentDate && !completedSchedules.contains(where: { $0.0 == schedule }) {
+            if schedule < currentDate && !sentSchedules.contains(schedule) {
                 if let cachedLocation = locationCache.getLastLocation() {
                     completedSchedules.append((schedule, cachedLocation))
+                    sentSchedules.insert(schedule) // ✅ mark backfilled schedule as sent
                     print("🔄 [LocationProcessor] Backfilled schedule \(schedule) with cached location")
                 }
             }
         }
         
         if !completedSchedules.isEmpty {
-            backendService.sendSchedules(completedSchedules)
+            await backendService.sendSchedules(completedSchedules)
             completedSchedules.removeAll()
         }
     }

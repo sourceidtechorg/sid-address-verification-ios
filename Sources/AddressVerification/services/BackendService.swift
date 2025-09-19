@@ -21,27 +21,55 @@ class BackendService {
         self.apiHelper = apiHelper
     }
     
-    // Send completed schedules with attached geo-tags to backend
-    func sendSchedules(_ schedules: [(Date, CLLocation)]) {
-        for (schedule, location) in schedules {
+    /// Send completed schedules with attached geo-tags to backend
+       func sendSchedules(_ schedules: [(Date, CLLocation)]) async {
+           await withTaskGroup(of: Void.self) { group in
+               for (schedule, location) in schedules {
+                   group.addTask {
+                       await self.handleSchedule(schedule, location: location)
+                   }
+               }
+           }
+       }
+
+       /// Process and send one schedule
+    private func handleSchedule(_ schedule: Date, location: CLLocation) async {
+        do {
+            let geocoder = CLGeocoder()
+            let placemarks = try await geocoder.reverseGeocodeLocation(location)
+            let address = placemarks.first?.name ?? "Unknown address"
+
             let request = AddGeoTagRequest(
-                address: "TODO: reverse geocode",
+                address: address,
                 latitude: location.coordinate.latitude,
                 longitude: location.coordinate.longitude,
                 deviceTimestamp: ISO8601DateFormatter().string(from: schedule)
             )
-            
-            Task {
-                do {
-                    try await sendGeoTag(request)
-                    print("✅ [BackendService] Sent schedule \(schedule)")
-                } catch {
-                    print("📥 [BackendService] Failed to send. Caching instead: \(error)")
-                    GeoTagCache.save(CachedGeoTag.from(request))
-                }
+
+            try await sendGeoTag(request)
+            print("✅ [BackendService] Sent schedule \(schedule) with address: \(address)")
+        } catch {
+            print("📥 [BackendService] Failed to send schedule \(schedule). Caching instead. Error: \(error)")
+
+            // 🔹 Re-do reverse geocode for caching (or reuse last attempt if partial result available)
+            var resolvedAddress = "Unknown address"
+            do {
+                let placemarks = try await CLGeocoder().reverseGeocodeLocation(location)
+                resolvedAddress = placemarks.first?.name ?? "Unknown address"
+            } catch {
+                print("⚠️ [BackendService] Reverse geocoding also failed, using fallback address")
             }
+
+            let cached = CachedGeoTag(
+                address: resolvedAddress,
+                latitude: location.coordinate.latitude,
+                longitude: location.coordinate.longitude,
+                deviceTimestamp: ISO8601DateFormatter().string(from: schedule)
+            )
+            GeoTagCache.save(cached)
         }
     }
+
     
     // Equivalent to sendCachedGeoTags()
     func flushCachedGeoTags() async {

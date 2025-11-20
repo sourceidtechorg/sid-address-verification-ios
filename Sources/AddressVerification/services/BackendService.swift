@@ -34,12 +34,19 @@ class BackendService {
 
        /// Process and send one schedule
        private func handleSchedule(_ schedule: Date, location: CLLocation) async {
+           guard let credentials = StoredCredentials.load() else {
+               print("❌ [BackendService] No stored credentials found. Cannot send schedule.")
+               return
+           }
+
+
            do {
                let geocoder = CLGeocoder()
                let placemarks = try await geocoder.reverseGeocodeLocation(location)
                let address = placemarks.first?.name ?? "Unknown address"
 
                let request = AddGeoTagRequest(
+                customer: credentials.customerID,
                    address: address,
                    latitude: location.coordinate.latitude,
                    longitude: location.coordinate.longitude,
@@ -52,6 +59,7 @@ class BackendService {
                print("📥 [BackendService] Failed to send schedule \(schedule). Caching instead. Error: \(error)")
                
                let cached = CachedGeoTag.fromRequest(
+                customer: credentials.customerID,
                    address: "Unknown address",
                    latitude: location.coordinate.latitude,
                    longitude: location.coordinate.longitude,
@@ -71,6 +79,7 @@ class BackendService {
         var allSent = true
         for tag in cachedTags {
             let request = AddGeoTagRequest(
+                customer: tag.customer,
                 address: tag.address,
                 latitude: tag.latitude,
                 longitude: tag.longitude,
@@ -103,7 +112,7 @@ class BackendService {
         }
 
         return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<AddGeoTagResponse, Error>) in
-            apiHelper.addGeoTag(apiKey: credentials.apiKey, token: credentials.token, request: geoTag)
+            apiHelper.addGeoTag(apiKey: credentials.apiKey, customerID: credentials.customerID, token: credentials.token, request: geoTag)
                 .sink(
                     receiveCompletion: { completion in
                         if case .failure(let error) = completion {

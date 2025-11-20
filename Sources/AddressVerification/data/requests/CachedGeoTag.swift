@@ -10,6 +10,7 @@
 import Foundation
 
 struct CachedGeoTag: Codable {
+    let customer: String
     let address: String
     let latitude: Double
     let longitude: Double
@@ -20,6 +21,7 @@ extension CachedGeoTag {
     // existing converter from AddGeoTagRequest
     static func from(_ request: AddGeoTagRequest) -> CachedGeoTag {
         return CachedGeoTag(
+            customer: request.customer,
             address: request.address,
             latitude: request.latitude,
             longitude: request.longitude,
@@ -29,6 +31,7 @@ extension CachedGeoTag {
 
     // new factory: accept Date and convert to ISO string
     static func fromRequest(
+        customer: String,
         address: String,
         latitude: Double,
         longitude: Double,
@@ -36,6 +39,7 @@ extension CachedGeoTag {
     ) -> CachedGeoTag {
         let ts = ISO8601DateFormatter().string(from: deviceTimestamp)
         return CachedGeoTag(
+            customer: customer,
             address: address,
             latitude: latitude,
             longitude: longitude,

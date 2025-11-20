@@ -15,6 +15,7 @@ class ApiService {
         endpoint: String,
         method: String,
         token: String? = nil,
+        customerID: String? = nil,
         apiKey: String,
         body: T? = nil
     ) -> URLRequest? {
@@ -25,6 +26,10 @@ class ApiService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
 
+        if let customerID = customerID {
+            request.setValue(customerID, forHTTPHeaderField: "customer")
+        }
+        
         if let token = token {
             request.setValue(token, forHTTPHeaderField: "x-auth-token")
         }
@@ -46,6 +51,7 @@ class ApiService {
         endpoint: String,
         method: String,
         token: String? = nil,
+        customerID: String? = nil,
         apiKey: String
     ) -> URLRequest? {
         guard let url = URL(string: "\(baseUrl)/\(endpoint)") else { return nil }
@@ -55,6 +61,11 @@ class ApiService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
 
+        if let customerID = customerID {
+            request.setValue(customerID, forHTTPHeaderField: "customer")
+        }
+        
+        
         if let token = token {
             request.setValue(token, forHTTPHeaderField: "x-auth-token")
         }
@@ -98,27 +109,13 @@ class ApiService {
     }
 
 
-    func fetchCustomerHistory(token: String, apiKey: String, completion: @escaping (Result<CustomerAddressHistoryResponse, Error>) -> Void) {
+    func fetchCustomerHistory(customerID: String, apiKey: String, completion: @escaping (Result<CustomerAddressHistoryResponse, Error>) -> Void) {
         performRequestWithAutoRefresh(
                endpoint: "customer/address-history",
                method: "GET",
                decodeTo: CustomerAddressHistoryResponse.self,
                completion: completion
            )
-//        guard let request = createRequest(endpoint: "customer/address-history", method: "GET", token: token, apiKey: apiKey) else { return }
-//
-//        URLSession.shared.dataTask(with: request) { data, response, error in
-//            if let data = data {
-//                do {
-//                    let decoded = try JSONDecoder().decode(CustomerAddressHistoryResponse.self, from: data)
-//                    completion(.success(decoded))
-//                } catch {
-//                    completion(.failure(error))
-//                }
-//            } else if let error = error {
-//                completion(.failure(error))
-//            }
-//        }.resume()
     }
 
     func addGeoTag(token: String, apiKey: String, requestBody: AddGeoTagRequest, completion: @escaping (Result<AddGeoTagResponse, Error>) -> Void) {
@@ -129,20 +126,6 @@ class ApiService {
                decodeTo: AddGeoTagResponse.self,
                completion: completion
            )
-//        guard let request = createRequest(endpoint: "customer/add-geotag", method: "POST", token: token, apiKey: apiKey, body: requestBody) else { return }
-//
-//        URLSession.shared.dataTask(with: request) { data, response, error in
-//            if let data = data {
-//                do {
-//                    let decoded = try JSONDecoder().decode(AddGeoTagResponse.self, from: data)
-//                    completion(.success(decoded))
-//                } catch {
-//                    completion(.failure(error))
-//                }
-//            } else if let error = error {
-//                completion(.failure(error))
-//            }
-//        }.resume()
     }
     
     func refreshAuthToken(refreshToken: String, apiKey: String, completion: @escaping (Result<(token: String, refreshToken: String), Error>) -> Void) {
@@ -197,6 +180,7 @@ class ApiService {
                 endpoint: endpoint,
                 method: method,
                 token: token,
+                customerID: credentials.customerID,
                 apiKey: credentials.apiKey,
                 body: requestBody
             )
@@ -215,7 +199,7 @@ class ApiService {
                         case .success(let (newToken, newRefreshToken)):
                             credentials.token = newToken
                             credentials.refreshToken = newRefreshToken
-                            StoredCredentials.save(apiKey: credentials.apiKey, token: newToken, refreshToken: newRefreshToken)
+                            StoredCredentials.save(apiKey: credentials.apiKey, customerID: credentials.customerID, token: newToken, refreshToken: newRefreshToken)
                             executeRequest(with: newToken) // Retry with new token
                         case .failure(let refreshError):
                             completion(.failure(refreshError))
@@ -263,6 +247,7 @@ class ApiService {
                 endpoint: endpoint,
                 method: method,
                 token: token,
+                customerID: credentials.customerID,
                 apiKey: credentials.apiKey,
                 body: Optional<Data>.none // 👈 explicitly nil body
             )
@@ -281,7 +266,7 @@ class ApiService {
                         case .success(let (newToken, newRefreshToken)):
                             credentials.token = newToken
                             credentials.refreshToken = newRefreshToken
-                            StoredCredentials.save(apiKey: credentials.apiKey, token: newToken, refreshToken: newRefreshToken)
+                            StoredCredentials.save(apiKey: credentials.apiKey, customerID: credentials.customerID, token: newToken, refreshToken: newRefreshToken)
                             executeRequest(with: newToken)
                         case .failure(let refreshError):
                             completion(.failure(refreshError))

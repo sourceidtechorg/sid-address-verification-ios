@@ -25,16 +25,16 @@ class ApiHelper {
         .eraseToAnyPublisher()
     }
 
-    func fetchCustomerHistory(apiKey: String, token: String) -> AnyPublisher<CustomerAddressHistoryResponse, Error> {
+    func fetchCustomerHistory(apiKey: String, customerID: String) -> AnyPublisher<CustomerAddressHistoryResponse, Error> {
         return Future { promise in
-            self.apiService.fetchCustomerHistory(token: token, apiKey: apiKey) { result in
+            self.apiService.fetchCustomerHistory(customerID: customerID, apiKey: apiKey) { result in
                 promise(result)
             }
         }
         .eraseToAnyPublisher()
     }
 
-    func addGeoTag(apiKey: String, token: String, request: AddGeoTagRequest) -> AnyPublisher<AddGeoTagResponse, Error> {
+    func addGeoTag(apiKey: String, customerID: String, token: String, request: AddGeoTagRequest) -> AnyPublisher<AddGeoTagResponse, Error> {
         return Future { promise in
             self.apiService.addGeoTag(token: token, apiKey: apiKey, requestBody: request) { result in
                 promise(result)

@@ -25,6 +25,7 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
     private let apiHelper = ApiHelper()
     private let geoTagCache = GeoTagCache()
     private var apiKey = ""
+    private var customerID = ""
     private var token = ""
     private var refreshToken = ""
     
@@ -65,7 +66,7 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
           print("🚀 [LocationService] Initialized")
       }
     
-    private var customerID: String = ""
+//    private var customerID: String = ""
     private var isGeotaggingActive = false
     
     private let isSimpleTestMode = false  // Set to false for production
@@ -82,12 +83,13 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
         }
         
         // Start location updates
-    func startTracking(apiKey: String, token: String, refreshToken: String) async {
+    func startTracking(apiKey: String, customerID: String, token: String, refreshToken: String) async {
             self.apiKey = apiKey
+        self.customerID = customerID
             self.token = token
             self.refreshToken = refreshToken
             
-            StoredCredentials.save(apiKey: apiKey, token: token, refreshToken: refreshToken)
+        StoredCredentials.save(apiKey: apiKey, customerID: customerID, token: token, refreshToken: refreshToken)
             requestAuthorization()
         await startGeotagging()
             
@@ -208,265 +210,6 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
 
     
     
-//    override init() {
-//        super.init()
-//        locationManager = CLLocationManager()
-//        locationManager.delegate = self
-//        locationManager.desiredAccuracy = kCLLocationAccuracyBest
-//        locationManager.allowsBackgroundLocationUpdates = true
-//        locationManager.pausesLocationUpdatesAutomatically = false
-//        
-//        // Check initial capabilities
-//        checkSystemCapabilities()
-//        
-//        
-//        // Request notification permissions
-//        requestNotificationPermissions()
-//    }
-    
-    /*private func checkSystemCapabilities() {
-        print("🔍 System Capabilities Check:")
-        print("   - Location Services Enabled: \(CLLocationManager.locationServicesEnabled())")
-        //        print("   - Background App Refresh Available: \(UIApplication.shared.backgroundRefreshStatus.rawValue)")
-        print("   - Current Authorization: \(locationManager.authorizationStatus.rawValue)")
-        
-#if targetEnvironment(simulator)
-        print("   - Running on Simulator: YES (Background tasks limited)")
-#else
-        print("   - Running on Device: YES")
-#endif
-    }*/
-    
-    /*private func requestNotificationPermissions() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-            if granted {
-                print("✅ Notification permissions granted")
-            } else if let error = error {
-                print("❌ Failed to request notification permissions: \(error)")
-            }
-        }
-    }*/
-    
-    /*private func showTrackingNotification() {
-        let content = UNMutableNotificationContent()
-        content.title = "Address Verification"
-        content.body = "Sending location updates for verification..."
-        content.sound = .default
-        
-        let request = UNNotificationRequest(identifier: "LocationTracking", content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request) { error in
-            if let error = error {
-                print("❌ Failed to show notification: \(error)")
-            } else {
-                print("🔔 Tracking notification displayed")
-            }
-        }
-    }*/
-    
-    /*func start(apiKey: String, token: String, refreshToken: String) {
-        self.apiKey = apiKey
-        self.token = token
-        self.refreshToken = refreshToken
-        
-        StoredCredentials.save(apiKey: apiKey, token: token, refreshToken: refreshToken)
-        
-        print("🚀 Starting LocationTrackingService...")
-        print("   - API Key: \(apiKey.prefix(20))...")
-        
-        // Show notification to indicate service is running
-        showTrackingNotification()
-        
-        //           print("   - Customer ID: \(customerID)")
-        
-        //
-        //        locationManager.allowsBackgroundLocationUpdates = true
-        //          locationManager.pausesLocationUpdatesAutomatically = false
-        //          locationManager.startMonitoringSignificantLocationChanges()
-        
-        // Request location permissions first
-        //        requestLocationPermissions()
-        
-        Task {
-            await requestLocationPermissions()
-            
-            await self.runScheduledGeoTagging()
-            scheduleBackgroundGeotagTask()
-        }
-        
-        
-    }*/
-    
-    /*private func requestLocationPermissions() async {
-        print("🔐 Requesting location permissions...")
-        print("   Current status: \(locationManager.authorizationStatus.rawValue)")
-        
-        switch locationManager.authorizationStatus {
-        case .notDetermined:
-            print("📱 Requesting Always authorization...")
-            locationManager.requestAlwaysAuthorization()
-            
-            // Wait for permission response
-            await waitForPermissionResponse()
-            
-        case .authorizedWhenInUse:
-            print("⬆️ Upgrading from When-In-Use to Always...")
-            locationManager.requestAlwaysAuthorization()
-            
-            // Wait for permission response
-            await waitForPermissionResponse()
-            
-        case .authorizedAlways:
-            print("✅ Already have Always permission")
-            configureLocationManager()
-            
-        case .denied, .restricted:
-            print("❌ Location permission denied/restricted. Background tracking unavailable.")
-            
-        @unknown default:
-            print("⚠️ Unknown location authorization status")
-        }
-    }*/
-    
-    /* private func waitForPermissionResponse() async {
-        // Wait up to 10 seconds for user to respond to permission dialog
-        for _ in 0..<100 {
-            if locationManager.authorizationStatus != .notDetermined {
-                break
-            }
-            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
-        }
-        
-        // Configure if we got the right permission
-        if locationManager.authorizationStatus == .authorizedAlways {
-            configureLocationManager()
-        } else {
-            print("❌ Did not receive Always location permission (got: \(locationManager.authorizationStatus.rawValue))")
-        }
-    }*/
-    
-    
-    /*private func configureLocationManager() {
-        guard locationManager.authorizationStatus == .authorizedAlways else {
-            print("❌ Always location permission required for background tracking")
-            return
-        }
-        
-        locationManager.allowsBackgroundLocationUpdates = true
-        locationManager.pausesLocationUpdatesAutomatically = false
-        locationManager.startMonitoringSignificantLocationChanges()
-        locationManager.startUpdatingLocation()
-        
-        
-        // Schedule the first background task
-        scheduleBackgroundGeotagTask()
-    }*/
-    
-    
-    /*private func runScheduledGeoTagging() async {
-        guard !isGeotaggingActive else {
-            print("⚠️ Geotagging session already active")
-            return
-        }
-        
-        isGeotaggingActive = true
-        defer { isGeotaggingActive = false }
-        
-        // Step 1: Fetch org config
-        let orgConfig = await fetchOrgConfig()
-        guard let config = orgConfig else {
-            print("Failed to fetch org config")
-            return
-        }
-        
-        // Step 2: Fetch pending verification
-        let pendingAddress = await fetchPendingAddress()
-        guard let address = pendingAddress else {
-            print("No pending verification")
-            return
-        }
-        
-        // Step 3: Extract timestamps and schedule
-        let lastTimestamp = address.metadata.locations
-            .compactMap { ISO8601DateFormatter().date(from: $0.timestamp) }
-            .max() ?? Date()
-        
-        let intervalSeconds: Double
-        let sessionDurationSeconds: Double
-        
-        if isTestingMode {
-            // TESTING: 10 second intervals, 2 minute session
-            intervalSeconds = 10.0
-            sessionDurationSeconds = 120.0  // 2 minutes total
-            print("🧪 TESTING MODE: 10 second intervals, 2 minute session")
-        } else {
-            // PRODUCTION: Use config values
-            intervalSeconds = config.geotaggingPollingInterval * 3600
-            sessionDurationSeconds = Double(config.geotaggingSessionTimeout) * 86400
-            print("🏭 PRODUCTION MODE: Using config intervals")
-        }
-        
-        var current = lastTimestamp.timeIntervalSince1970
-        let end = current + sessionDurationSeconds
-        let now = Date().timeIntervalSince1970
-        
-        var timestamps: [TimeInterval] = []
-        while current <= end {
-            if current > now { timestamps.append(current) }
-            current += intervalSeconds
-        }
-        
-        print("🔄 Scheduled \(timestamps.count) timestamps")
-        
-        // Print all timestamps in readable format
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .none
-        dateFormatter.timeStyle = .medium
-        
-        print("📅 Generated Timestamps:")
-        for (index, timestamp) in timestamps.enumerated() {
-            let date = Date(timeIntervalSince1970: timestamp)
-            let delay = timestamp - Date().timeIntervalSince1970
-            let delaySeconds = Int(delay)
-            
-            print("   \(index + 1). \(dateFormatter.string(from: date)) (in \(delaySeconds)s)")
-        }
-        
-        print("⏰ Current time: \(dateFormatter.string(from: Date()))")
-        
-        // For testing, process more iterations
-        let maxIterations = isTestingMode ? min(timestamps.count, 20) : min(timestamps.count, 10)
-        print("🚀 Starting geotag loop with max \(maxIterations) iterations...")
-        
-        for i in 0..<maxIterations {
-            let timestamp = timestamps[i]
-            let delay = timestamp - Date().timeIntervalSince1970
-            
-            if delay > 0 {
-                if isTestingMode {
-                    let delaySeconds = Int(delay)
-                    print("⏳ Waiting \(delaySeconds) seconds until next geotag...")
-                } else {
-                    let delayMinutes = Int(delay / 60)
-                    print("⏳ Waiting \(delayMinutes) minutes until next geotag...")
-                }
-                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-            }
-            
-            print("📍 Processing geotag \(i + 1)/\(maxIterations) at \(dateFormatter.string(from: Date()))")
-            await postCurrentLocation()
-            
-            // Check if we should continue
-            if !isGeotaggingActive {
-                print("🛑 Geotagging session stopped externally")
-                break
-            }
-        }
-        
-        print("✅ Finished geotagging session")
-        scheduleBackgroundGeotagTask() // Reschedule for next session
-        
-    }*/
-    
     private func fetchOrgConfig() async -> OrganisationConfigData? {
         
         await withCheckedContinuation { continuation in
@@ -486,7 +229,7 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
     
     private func fetchPendingAddress() async -> CustomerData? {
         await withCheckedContinuation { continuation in
-            apiHelper.fetchCustomerHistory(apiKey: apiKey, token: token)
+            apiHelper.fetchCustomerHistory(apiKey: apiKey, customerID: customerID)
                 .sink(receiveCompletion: { completion in
                     if case .failure(let error) = completion {
                         print("Customer history fetch error: \(error)")

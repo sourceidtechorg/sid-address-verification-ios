@@ -25,9 +25,9 @@ class ApiHelper {
         .eraseToAnyPublisher()
     }
 
-    func fetchCustomerHistory(apiKey: String, customerID: String) -> AnyPublisher<CustomerAddressHistoryResponse, Error> {
+    func fetchCustomerHistory(apiKey: String, customerID: String, verificationGroupId: String) -> AnyPublisher<CustomerAddressHistoryResponse, Error> {
         return Future { promise in
-            self.apiService.fetchCustomerHistory(customerID: customerID, apiKey: apiKey) { result in
+            self.apiService.fetchCustomerHistory(verificationGroupId: verificationGroupId, customerID: customerID, apiKey: apiKey) { result in
                 promise(result)
             }
         }

@@ -26,6 +26,7 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
     private let geoTagCache = GeoTagCache()
     private var apiKey = ""
     private var customerID = ""
+    private var verificationGroupID = ""
     private var token = ""
     private var refreshToken = ""
     
@@ -83,13 +84,14 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
         }
         
         // Start location updates
-    func startTracking(apiKey: String, customerID: String, token: String, refreshToken: String) async {
+    func startTracking(apiKey: String, customerID: String, verificationGroupId: String, token: String, refreshToken: String) async {
             self.apiKey = apiKey
         self.customerID = customerID
+        self.verificationGroupID = verificationGroupId
             self.token = token
             self.refreshToken = refreshToken
             
-        StoredCredentials.save(apiKey: apiKey, customerID: customerID, token: token, refreshToken: refreshToken)
+        StoredCredentials.save(apiKey: apiKey, customerID: customerID, verificationGroupId: verificationGroupId,token: token, refreshToken: refreshToken)
             requestAuthorization()
         await startGeotagging()
             
@@ -229,7 +231,7 @@ class LocationTrackingService: NSObject, CLLocationManagerDelegate {
     
     private func fetchPendingAddress() async -> CustomerData? {
         await withCheckedContinuation { continuation in
-            apiHelper.fetchCustomerHistory(apiKey: apiKey, customerID: customerID)
+            apiHelper.fetchCustomerHistory(apiKey: apiKey, customerID: customerID, verificationGroupId: verificationGroupID)
                 .sink(receiveCompletion: { completion in
                     if case .failure(let error) = completion {
                         print("Customer history fetch error: \(error)")

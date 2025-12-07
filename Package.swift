@@ -23,6 +23,9 @@ let package = Package(
     targets: [
         .target(
             name: "AddressVerification",
+            dependencies: [
+                        
+                       ],
             path: "Sources/AddressVerification",
             exclude: [],
             sources: ["."],

@@ -1,10 +1,14 @@
 // The Swift Programming Language
 // https://docs.swift.org/swift-book
 
+import Foundation
 import SwiftUI
 import MapKit
 import CoreLocation
 import BackgroundTasks
+#if os(iOS)
+import UIKit
+#endif
 
 @available(macOS 11.0, iOS 14.0, *)
 public struct AddressVerificationField: View {
@@ -30,7 +34,7 @@ public struct AddressVerificationField: View {
     
     // Manager objects
     @StateObject private var searchCompleter = SearchCompleter()
-    @StateObject private var locationManager = LocationManager()
+//    @StateObject private var locationManager = LocationManager()
     
     public init(
         apiKey: String,
@@ -341,6 +345,7 @@ extension AddressVerificationField {
            }
        }
 }
+
 
 // MARK: - Search Completer Delegate
 private class SearchCompleterDelegate: NSObject, MKLocalSearchCompleterDelegate {

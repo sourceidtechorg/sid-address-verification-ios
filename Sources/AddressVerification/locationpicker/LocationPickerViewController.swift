@@ -2,13 +2,8 @@
 //  LocationPickerViewController.swift
 //  AddressVerification
 //
-//  Created by Richard Uzor on 04/12/2025.
+//  Enhanced with ResolvedAddress and current location default
 //
-
-
-
-// MARK: - 3. LocationPickerViewController.swift
-// Sources/AddressVerification/LocationPicker/LocationPickerViewController.swift
 
 #if os(iOS)
 import UIKit
@@ -29,10 +24,11 @@ class LocationPickerViewController: UIViewController {
     
     // State
     private var selectedCoordinate: CLLocationCoordinate2D?
-    private var selectedAddress: String = "Move map to select location"
+    private var currentResolvedAddress: ResolvedAddress?
     private let geocoder = CLGeocoder()
     private var geocodeTimer: Timer?
     private let locationManager = CLLocationManager()
+    private var hasSetInitialLocation = false
     
     // MARK: - Lifecycle
     
@@ -46,8 +42,8 @@ class LocationPickerViewController: UIViewController {
         setupBottomSheet()
         setupCurrentLocationButton()
         
-        // Set initial location
-        moveToDefaultLocation()
+        // Request location and wait for it
+        requestCurrentLocation()
     }
     
     // MARK: - Setup Location Manager
@@ -55,6 +51,24 @@ class LocationPickerViewController: UIViewController {
     private func setupLocationManager() {
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
+    }
+    
+    // MARK: - Request Current Location
+    
+    private func requestCurrentLocation() {
+        let status = locationManager.authorizationStatus
+        
+        switch status {
+        case .notDetermined:
+            locationManager.requestWhenInUseAuthorization()
+        case .authorizedWhenInUse, .authorizedAlways:
+            locationManager.requestLocation()
+        case .denied, .restricted:
+            // Fall back to default location
+            moveToDefaultLocation()
+        @unknown default:
+            moveToDefaultLocation()
+        }
     }
     
     // MARK: - Setup Map View
@@ -66,7 +80,6 @@ class LocationPickerViewController: UIViewController {
         mapView.showsCompass = true
         mapView.showsScale = true
         
-        // iOS 13+ has better map details
         if #available(iOS 13.0, *) {
             mapView.showsBuildings = true
         }
@@ -77,18 +90,15 @@ class LocationPickerViewController: UIViewController {
     // MARK: - Setup Center Pin
     
     private func setupCenterPin() {
-        // Container for pin with shadow
         let pinContainer = UIView()
         pinContainer.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(pinContainer)
         
-        // Main pin
         centerPinImageView = UIImageView(image: UIImage(systemName: "mappin.circle.fill"))
         centerPinImageView.tintColor = .systemRed
         centerPinImageView.contentMode = .scaleAspectFit
         centerPinImageView.translatesAutoresizingMaskIntoConstraints = false
         
-        // Shadow layer
         centerPinImageView.layer.shadowColor = UIColor.black.cgColor
         centerPinImageView.layer.shadowOpacity = 0.4
         centerPinImageView.layer.shadowOffset = CGSize(width: 0, height: 3)
@@ -148,21 +158,18 @@ class LocationPickerViewController: UIViewController {
         containerView.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(containerView)
         
-        // Drag indicator
         let dragIndicator = UIView()
         dragIndicator.backgroundColor = .systemGray3
         dragIndicator.layer.cornerRadius = 2.5
         dragIndicator.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(dragIndicator)
         
-        // Info container
         let infoContainer = UIView()
         infoContainer.backgroundColor = .secondarySystemBackground
         infoContainer.layer.cornerRadius = 12
         infoContainer.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(infoContainer)
         
-        // Title
         let titleLabel = UILabel()
         titleLabel.text = "Selected Location"
         titleLabel.font = .systemFont(ofSize: 12, weight: .medium)
@@ -170,15 +177,13 @@ class LocationPickerViewController: UIViewController {
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         infoContainer.addSubview(titleLabel)
         
-        // Address label
         addressLabel = UILabel()
-        addressLabel.text = selectedAddress
+        addressLabel.text = "Move map to select location"
         addressLabel.font = .systemFont(ofSize: 16)
         addressLabel.numberOfLines = 3
         addressLabel.translatesAutoresizingMaskIntoConstraints = false
         infoContainer.addSubview(addressLabel)
         
-        // Coordinate label
         coordinateLabel = UILabel()
         coordinateLabel.text = "📍 ---, ---"
         coordinateLabel.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
@@ -186,13 +191,11 @@ class LocationPickerViewController: UIViewController {
         coordinateLabel.translatesAutoresizingMaskIntoConstraints = false
         infoContainer.addSubview(coordinateLabel)
         
-        // Activity indicator for geocoding
         activityIndicator = UIActivityIndicatorView(style: .medium)
         activityIndicator.translatesAutoresizingMaskIntoConstraints = false
         activityIndicator.hidesWhenStopped = true
         infoContainer.addSubview(activityIndicator)
         
-        // Buttons
         cancelButton = UIButton(type: .system)
         cancelButton.setTitle("Cancel", for: .normal)
         cancelButton.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
@@ -213,7 +216,6 @@ class LocationPickerViewController: UIViewController {
         confirmButton.addTarget(self, action: #selector(confirmTapped), for: .touchUpInside)
         containerView.addSubview(confirmButton)
         
-        // Constraints
         NSLayoutConstraint.activate([
             containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -258,25 +260,26 @@ class LocationPickerViewController: UIViewController {
     // MARK: - Actions
     
     private func moveToDefaultLocation() {
-        // Default to Lagos, Nigeria
         let coordinate = CLLocationCoordinate2D(latitude: 6.5244, longitude: 3.3792)
         let region = MKCoordinateRegion(
             center: coordinate,
             span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
         )
-        mapView.setRegion(region, animated: false)
-        
-        // Request location permission
-        locationManager.requestWhenInUseAuthorization()
+        mapView.setRegion(region, animated: true)
+        hasSetInitialLocation = true
+    }
+    
+    private func moveToLocation(_ coordinate: CLLocationCoordinate2D, zoom: Double = 0.01) {
+        let region = MKCoordinateRegion(
+            center: coordinate,
+            span: MKCoordinateSpan(latitudeDelta: zoom, longitudeDelta: zoom)
+        )
+        mapView.setRegion(region, animated: true)
     }
     
     @objc private func moveToCurrentLocation() {
         if let userLocation = mapView.userLocation.location {
-            let region = MKCoordinateRegion(
-                center: userLocation.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-            )
-            mapView.setRegion(region, animated: true)
+            moveToLocation(userLocation.coordinate)
         } else {
             locationManager.requestLocation()
         }
@@ -288,20 +291,16 @@ class LocationPickerViewController: UIViewController {
     }
     
     @objc private func confirmTapped() {
-        guard let coordinate = selectedCoordinate else { return }
+        guard let resolvedAddress = currentResolvedAddress else { return }
         
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
         
-        AddressVerificationInternal.shared.sendPickedLocation(
-            lat: coordinate.latitude,
-            lng: coordinate.longitude,
-            address: selectedAddress
-        )
+        AddressVerificationInternal.shared.sendPickedLocation(resolvedAddress)
         dismiss(animated: true)
     }
     
-    // MARK: - Geocoding
+    // MARK: - Geocoding with Full Address Resolution
     
     private func reverseGeocodeCoordinate(_ coordinate: CLLocationCoordinate2D) {
         geocodeTimer?.invalidate()
@@ -321,6 +320,7 @@ class LocationPickerViewController: UIViewController {
             self.activityIndicator.stopAnimating()
             
             if let place = placemarks?.first {
+                // Build full address string
                 let components = [
                     place.name,
                     place.thoroughfare,
@@ -331,12 +331,31 @@ class LocationPickerViewController: UIViewController {
                     place.country
                 ].compactMap { $0 }
                 
-                self.selectedAddress = components.isEmpty ? "Unknown location" : components.joined(separator: ", ")
+                let fullAddress = components.isEmpty ? "Unknown location" : components.joined(separator: ", ")
+                
+                // Create resolved address matching Android structure
+                self.currentResolvedAddress = ResolvedAddress(
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude,
+                    fullAddress: fullAddress,
+                    country: place.country,
+                    state: place.administrativeArea,
+                    city: place.locality ?? place.subAdministrativeArea,
+                    postalCode: place.postalCode,
+                    street: place.thoroughfare
+                )
+                
+                self.addressLabel.text = fullAddress
+                
             } else {
-                self.selectedAddress = "Unable to resolve address"
+                self.currentResolvedAddress = ResolvedAddress(
+                    latitude: coordinate.latitude,
+                    longitude: coordinate.longitude,
+                    fullAddress: "Unable to resolve address"
+                )
+                self.addressLabel.text = "Unable to resolve address"
             }
             
-            self.addressLabel.text = self.selectedAddress
             self.coordinateLabel.text = String(format: "📍 %.6f, %.6f", coordinate.latitude, coordinate.longitude)
         }
     }
@@ -358,29 +377,35 @@ extension LocationPickerViewController: MKMapViewDelegate {
 extension LocationPickerViewController: CLLocationManagerDelegate {
     
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        if let location = locations.first {
-            let region = MKCoordinateRegion(
-                center: location.coordinate,
-                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-            )
-            mapView.setRegion(region, animated: true)
+        if let location = locations.first, !hasSetInitialLocation {
+            moveToLocation(location.coordinate)
+            hasSetInitialLocation = true
         }
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Location error: \(error.localizedDescription)")
+        if !hasSetInitialLocation {
+            moveToDefaultLocation()
+        }
     }
     
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         switch manager.authorizationStatus {
         case .authorizedWhenInUse, .authorizedAlways:
-            locationManager.requestLocation()
+            if !hasSetInitialLocation {
+                locationManager.requestLocation()
+            }
         case .denied, .restricted:
-            print("Location access denied")
+            if !hasSetInitialLocation {
+                moveToDefaultLocation()
+            }
         case .notDetermined:
             locationManager.requestWhenInUseAuthorization()
         @unknown default:
-            break
+            if !hasSetInitialLocation {
+                moveToDefaultLocation()
+            }
         }
     }
 }

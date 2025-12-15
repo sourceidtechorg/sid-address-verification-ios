@@ -2,22 +2,19 @@
 //  AddressVerificationInternal.swift
 //  AddressVerification
 //
-//  Created by Richard Uzor on 04/12/2025.
+//  Updated to use ResolvedAddress structure
 //
 
-
-
-// MARK: - 2. AddressVerificationInternal.swift
-// Internal coordinator for callbacks
+import Foundation
 
 internal class AddressVerificationInternal {
     static let shared = AddressVerificationInternal()
     private init() {}
     
-    var pickLocationCallback: ((Double, Double, String) -> Void)?
+    var pickLocationCallback: ((ResolvedAddress) -> Void)?
     
-    func sendPickedLocation(lat: Double, lng: Double, address: String) {
-        pickLocationCallback?(lat, lng, address)
+    func sendPickedLocation(_ address: ResolvedAddress) {
+        pickLocationCallback?(address)
         pickLocationCallback = nil
     }
 }

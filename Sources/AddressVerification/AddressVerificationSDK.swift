@@ -2,9 +2,8 @@
 //  AddressVerificationSDK.swift
 //  AddressVerification
 //
-//  Created by Richard Uzor on 04/12/2025.
-//// MARK: - 1. AddressVerification.swift (Main SDK Entry Point)
-// This is your public SDK interface - single entry point like Android
+//  Updated with ResolvedAddress return type
+//
 
 import Foundation
 import SwiftUI
@@ -17,46 +16,40 @@ public class AddressVerification {
     public static let shared = AddressVerification()
     private init() {}
     
-    
-    // MARK: - Pick Location (New Feature - iOS Only)
+    // MARK: - Pick Location (Enhanced with ResolvedAddress)
     /// Opens a map interface for the user to manually pick a location
     /// - Parameters:
-    ///   - context: The view controller to present from
-    ///   - onPicked: Callback with (latitude, longitude, address)
+    ///   - viewController: The view controller to present from (optional)
+    ///   - onPicked: Callback with complete ResolvedAddress object
 #if os(iOS)
-   /// Pick a location using Apple Maps
-   /// - Parameters:
-   ///   - viewController: The view controller to present from (optional)
-   ///   - onPicked: Callback with (latitude, longitude, address)
-   public func pickLocation(
-       from viewController: UIViewController? = nil,
-       onPicked: @escaping (Double, Double, String) -> Void
-   ) {
-       let vc = viewController ?? Self.getRootViewController()
-       
-       guard let presentingVC = vc else {
-           print("AddressVerification: No view controller available")
-           return
-       }
-       
-       AddressVerificationInternal.shared.pickLocationCallback = onPicked
-       
-       let picker = LocationPickerViewController()
-       picker.modalPresentationStyle = .fullScreen
-       presentingVC.present(picker, animated: true)
-   }
-   
-   private static func getRootViewController() -> UIViewController? {
-       UIApplication.shared.connectedScenes
-           .compactMap { $0 as? UIWindowScene }
-           .flatMap { $0.windows }
-           .first { $0.isKeyWindow }?
-           .rootViewController
-   }
-   #endif
+    public func pickLocation(
+        from viewController: UIViewController? = nil,
+        onPicked: @escaping (ResolvedAddress) -> Void
+    ) {
+        let vc = viewController ?? Self.getRootViewController()
+        
+        guard let presentingVC = vc else {
+            print("AddressVerification: No view controller available")
+            return
+        }
+        
+        AddressVerificationInternal.shared.pickLocationCallback = onPicked
+        
+        let picker = LocationPickerViewController()
+        picker.modalPresentationStyle = .fullScreen
+        presentingVC.present(picker, animated: true)
+    }
+    
+    private static func getRootViewController() -> UIViewController? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }?
+            .rootViewController
+    }
+#endif
 
     // MARK: - Start Location Tracking (Existing Feature)
-    /// Starts continuous location tracking with remote config
     public func startTrackingWithRemoteConfig(
         apiKey: String,
         customerID: String,
@@ -83,7 +76,6 @@ public class AddressVerification {
         }
     }
     
-    /// Stops location tracking
     public func stopLocationTracking() {
         Task {
             await LocationTrackingService.shared.stopTracking()

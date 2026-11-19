@@ -219,6 +219,7 @@ extension AddressVerificationField {
             request.httpMethod = "GET"
             request.setValue("*/*", forHTTPHeaderField: "accept")
             request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+            request.setValue("SDK", forHTTPHeaderField: "X-Verification-Channel")
             
             let (data, response) = try await URLSession.shared.data(for: request)
             
@@ -285,6 +286,7 @@ extension AddressVerificationField {
         request.httpMethod = "GET"
         request.setValue("*/*", forHTTPHeaderField: "accept")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue("SDK", forHTTPHeaderField: "X-Verification-Channel")
         
         let (data, _) = try await URLSession.shared.data(for: request)
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]

@@ -47,6 +47,7 @@ class ApiService {
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue("SDK", forHTTPHeaderField: "X-Verification-Channel")
 
         if let customerID = customerID {
             request.setValue(customerID, forHTTPHeaderField: "customer")
@@ -86,6 +87,7 @@ class ApiService {
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue("SDK", forHTTPHeaderField: "X-Verification-Channel")
 
         if let customerID = customerID {
             request.setValue(customerID, forHTTPHeaderField: "customer")
